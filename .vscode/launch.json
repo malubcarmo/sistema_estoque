@@ -2,6 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "java",
+      "name": "SistemaEstoque",
+      "request": "launch",
+      "mainClass": "SistemaEstoque",
+      "projectName": "sistema_estoque_c4a30e16"
+    },
+    {
       "name": "C/C++ Runner: Debug Session",
       "type": "cppdbg",
       "request": "launch",

@@ -6,7 +6,8 @@ O sistema permite:
 - Inserir e remover produtos do estoque  
 - Filtrar produtos com baixo estoque  
 - Aplicar e remover descontos em produtos  
-- Calcular o valor total e a quantidade total de itens  
+- Calcular o valor total e a quantidade total de itens
+- Gerar relatório dos produtos em estoque
 
 ---
 

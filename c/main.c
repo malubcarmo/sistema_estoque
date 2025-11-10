@@ -11,8 +11,8 @@ typedef struct {
     int codigo;
     char nome[50];
     int quantidade;
-    float preco;          // preço atual (pode ter desconto)
-    float precoOriginal;  // preço original (sem desconto)
+    float preco;         
+    float precoOriginal; 
 } Produto;
 
 Produto produtos[MAX_PRODUTOS];
@@ -22,17 +22,14 @@ int numProdutos = 0;
 // FUNÇÕES FUNCIONAIS (PUXAS)
 // ==========================
 
-// Função pura 1 — Calcula desconto sem efeitos colaterais
 float calcularDesconto(float preco, float percentual) {
     return preco - (preco * (percentual / 100.0f));
 }
 
-// Função pura 2 — Remove desconto, retornando preço original
 float removerDesconto(float precoComDesconto, float precoOriginal) {
-    return precoOriginal; // simples, pois o original foi salvo
+    return precoOriginal; 
 }
 
-// Função pura 3 — Verifica se o produto está com baixo estoque
 int estoqueBaixo(int quantidade, int limite) {
     return quantidade < limite;
 }
@@ -41,7 +38,6 @@ int estoqueBaixo(int quantidade, int limite) {
 // FUNÇÕES DE ORDEM SUPERIOR
 // ==========================
 
-// Aplica uma função (HOF) a todos os preços
 void aplicarFuncaoNosPrecos(float (*fn)(float, void*), void *ctx) {
     for (int i = 0; i < numProdutos; i++) {
         float novoPreco = fn(produtos[i].preco, ctx);
@@ -50,13 +46,11 @@ void aplicarFuncaoNosPrecos(float (*fn)(float, void*), void *ctx) {
     printf("\nFunção aplicada a todos os preços com sucesso!\n");
 }
 
-// Callback para aplicar desconto com contexto (percentual)
 float desconto_fn(float preco, void *ctx) {
     float desconto = *(float*)ctx;
     return calcularDesconto(preco, desconto);
 }
 
-// Função de ordem superior — filtra produtos por predicado
 void filtrarProdutos(int (*pred)(int, int), int limite) {
     printf("\n=== PRODUTOS COM BAIXO ESTOQUE (<= %d) ===\n", limite);
     for (int i = 0; i < numProdutos; i++) {
@@ -108,7 +102,7 @@ void cadastrarProdutos() {
         printf("Preço unitário: R$ ");
         scanf("%f", &produtos[i].preco);
 
-        produtos[i].precoOriginal = produtos[i].preco; // salva o preço base
+        produtos[i].precoOriginal = produtos[i].preco;
     }
 
     printf("\nCadastro concluído!\n");
@@ -166,7 +160,6 @@ float calcularValorTotal() {
 // NOVAS FUNÇÕES (REQUERIDAS)
 // ==========================
 
-// Aplicar desconto em um único produto
 void aplicarDescontoIndividual() {
     int codigo;
     float desconto;
@@ -189,7 +182,6 @@ void aplicarDescontoIndividual() {
            produtos[idx].nome, produtos[idx].preco);
 }
 
-// Remover desconto e restaurar preço original de todos os produtos
 void removerDescontos() {
     for (int i = 0; i < numProdutos; i++) {
         produtos[i].preco = produtos[i].precoOriginal;
@@ -217,10 +209,17 @@ void relatorioEstoque() {
     printf("\nTotal de itens: %d\n", calcularTotalItens());
     printf("Valor total do estoque: R$ %.2f\n", calcularValorTotal());
 
-    int limite;
-    printf("\nDeseja ver produtos com baixo estoque? (digite limite mínimo): ");
-    scanf("%d", &limite);
-    filtrarProdutos(estoqueBaixo, limite);
+    char entrada[10];
+    printf("\nDeseja ver produtos com baixo estoque? (digite limite mínimo ou pressione ENTER para pular): ");
+    limparBuffer();
+    fgets(entrada, sizeof(entrada), stdin);
+
+    if (entrada[0] != '\n') {
+        int limite = atoi(entrada);
+        filtrarProdutos(estoqueBaixo, limite);
+    } else {
+        printf("Filtro de baixo estoque ignorado.\n");
+    }
 }
 
 // ==========================
