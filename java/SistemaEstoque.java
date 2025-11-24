@@ -7,221 +7,318 @@ import java.util.stream.Collectors;
 
 public class SistemaEstoque {
 
-    // Produto imutável (Java record)
-    public static record Product(int codigo, String nome, int quantidade, BigDecimal preco, BigDecimal precoOriginal) {}
+    // ======================================================
+    // CLASSE BASE — Produto
+    // ======================================================
+    public static class Produto {
 
-    // ---------------------
-    // Funções puras
-    // ---------------------
-    public static BigDecimal calcularDesconto(BigDecimal preco, BigDecimal percentual) {
-        BigDecimal factor = BigDecimal.ONE.subtract(percentual.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
-        return preco.multiply(factor).setScale(2, RoundingMode.HALF_UP);
+        private final int codigo;
+        private final String nome;
+        private final int quantidade;
+        private final BigDecimal preco;
+        private final BigDecimal precoOriginal;
+
+        public Produto(int codigo, String nome, int quantidade,
+                       BigDecimal preco, BigDecimal precoOriginal) {
+            this.codigo = codigo;
+            this.nome = nome;
+            this.quantidade = quantidade;
+            this.preco = preco;
+            this.precoOriginal = precoOriginal;
+        }
+
+        // Getters – Encapsulamento
+        public int getCodigo() { return codigo; }
+        public String getNome() { return nome; }
+        public int getQuantidade() { return quantidade; }
+        public BigDecimal getPreco() { return preco; }
+        public BigDecimal getPrecoOriginal() { return precoOriginal; }
     }
 
-    public static BigDecimal removerDesconto(BigDecimal precoComDesconto, BigDecimal precoOriginal) {
-        return precoOriginal.setScale(2, RoundingMode.HALF_UP);
+    // ======================================================
+    // CLASSE DERIVADA — ProdutoComDesconto
+    // ======================================================
+    public static class ProdutoComDesconto extends Produto {
+
+        private final BigDecimal descontoPercentual;
+
+        public ProdutoComDesconto(int codigo, String nome, int quantidade,
+                                  BigDecimal precoOriginal, BigDecimal descontoPercentual) {
+
+            super(codigo, nome, quantidade,
+                  aplicar(precoOriginal, descontoPercentual),
+                  precoOriginal);
+
+            this.descontoPercentual = descontoPercentual;
+        }
+
+        public BigDecimal getDescontoPercentual() { return descontoPercentual; }
+
+        private static BigDecimal aplicar(BigDecimal preco, BigDecimal percentual) {
+            BigDecimal factor = BigDecimal.ONE.subtract(
+                percentual.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+            );
+            return preco.multiply(factor).setScale(2, RoundingMode.HALF_UP);
+        }
+    }
+
+
+    // ======================================================
+    // Funções Funcionais Puras
+    // ======================================================
+    public static BigDecimal calcularDesconto(BigDecimal preco, BigDecimal percentual) {
+        BigDecimal factor = BigDecimal.ONE.subtract(
+                percentual.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+        );
+        return preco.multiply(factor).setScale(2, RoundingMode.HALF_UP);
     }
 
     public static boolean estoqueBaixo(int quantidade, int limite) {
         return quantidade < limite;
     }
 
-    // ---------------------
-    // Funções de ordem superior / operações imutáveis
-    // ---------------------
+    // ======================================================
+    // Operações Funcionais (criando novos objetos)
+    // ======================================================
 
-    public static List<Product> applyToPrices(List<Product> produtos, UnaryOperator<BigDecimal> priceFn) {
+    public static List<Produto> aplicarDescontoTodos(List<Produto> produtos, BigDecimal percentual) {
         return produtos.stream()
-                .map(p -> new Product(p.codigo(), p.nome(), p.quantidade(), priceFn.apply(p.preco()), p.precoOriginal()))
+                .map(p -> new ProdutoComDesconto(
+                        p.getCodigo(),
+                        p.getNome(),
+                        p.getQuantidade(),
+                        p.getPrecoOriginal(),
+                        percentual
+                ))
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    public static List<Product> aplicarDescontoTodos(List<Product> produtos, BigDecimal percentual) {
-        return applyToPrices(produtos, preco -> calcularDesconto(preco, percentual));
-    }
-
-    public static List<Product> aplicarDescontoIndividual(List<Product> produtos, int codigo, BigDecimal percentual) {
+    public static List<Produto> aplicarDescontoIndividual(List<Produto> produtos, int codigo, BigDecimal percentual) {
         return produtos.stream()
                 .map(p -> {
-                    if (p.codigo() == codigo) {
-                        BigDecimal novoPreco = calcularDesconto(p.preco(), percentual);
-                        return new Product(p.codigo(), p.nome(), p.quantidade(), novoPreco, p.precoOriginal());
-                    } else {
-                        return p;
+                    if (p.getCodigo() == codigo) {
+                        return new ProdutoComDesconto(
+                                p.getCodigo(),
+                                p.getNome(),
+                                p.getQuantidade(),
+                                p.getPrecoOriginal(),
+                                percentual
+                        );
                     }
+                    return p;
                 })
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    public static List<Product> removerDescontos(List<Product> produtos) {
+    public static List<Produto> removerDescontos(List<Produto> produtos) {
         return produtos.stream()
-                .map(p -> new Product(p.codigo(), p.nome(), p.quantidade(), removerDesconto(p.preco(), p.precoOriginal()), p.precoOriginal()))
+                .map(p -> new Produto(
+                        p.getCodigo(),
+                        p.getNome(),
+                        p.getQuantidade(),
+                        p.getPrecoOriginal(),
+                        p.getPrecoOriginal()
+                ))
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    public static List<Product> filterProducts(List<Product> produtos, BiPredicate<Integer, Integer> pred, int limite) {
-        return produtos.stream()
-                .filter(p -> pred.test(p.quantidade(), limite))
-                .collect(Collectors.toUnmodifiableList());
-    }
-
-    public static List<Product> insertProduct(List<Product> produtos, Product novo) {
-        List<Product> copy = new ArrayList<>(produtos);
+    public static List<Produto> insertProduct(List<Produto> produtos, Produto novo) {
+        List<Produto> copy = new ArrayList<>(produtos);
         copy.add(novo);
         return Collections.unmodifiableList(copy);
     }
-    public static List<Product> movimentarEstoque(List<Product> produtos, int codigo, int deltaQuantidade) {
+
+    public static List<Produto> movimentarEstoque(List<Produto> produtos, int codigo, int deltaQuantidade) {
         return produtos.stream()
                 .map(p -> {
-                    if (p.codigo() == codigo) {
-                        int novaQtd = p.quantidade() + deltaQuantidade;
-                        if (novaQtd < 0) novaQtd = p.quantidade(); 
-                        return new Product(p.codigo(), p.nome(), novaQtd, p.preco(), p.precoOriginal());
-                    } else {
-                        return p;
+                    if (p.getCodigo() == codigo) {
+                        int novaQtd = p.getQuantidade() + deltaQuantidade;
+                        if (novaQtd < 0) novaQtd = p.getQuantidade();
+
+                        return new Produto(
+                                p.getCodigo(),
+                                p.getNome(),
+                                novaQtd,
+                                p.getPreco(),
+                                p.getPrecoOriginal()
+                        );
                     }
+                    return p;
                 })
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    public static int totalItens(List<Product> produtos) {
-        return produtos.stream().mapToInt(Product::quantidade).sum();
+    public static int totalItens(List<Produto> produtos) {
+        return produtos.stream().mapToInt(Produto::getQuantidade).sum();
     }
 
-    public static BigDecimal totalValor(List<Product> produtos) {
+    public static BigDecimal totalValor(List<Produto> produtos) {
         return produtos.stream()
-                .map(p -> p.preco().multiply(BigDecimal.valueOf(p.quantidade())))
+                .map(p -> p.getPreco().multiply(BigDecimal.valueOf(p.getQuantidade())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    public static Optional<Product> buscarPorCodigo(List<Product> produtos, int codigo) {
-        return produtos.stream().filter(p -> p.codigo() == codigo).findFirst();
+    public static Optional<Produto> buscarPorCodigo(List<Produto> produtos, int codigo) {
+        return produtos.stream()
+                .filter(p -> p.getCodigo() == codigo)
+                .findFirst();
     }
 
-    // ---------------------
-    // Main / Interface
-    // ---------------------
+    public static List<Produto> filtrarBaixoEstoque(List<Produto> produtos, int limite) {
+        return produtos.stream()
+                .filter(p -> estoqueBaixo(p.getQuantidade(), limite))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+
+    // ======================================================
+    // MAIN — Interface de Console
+    // ======================================================
     public static void main(String[] args) {
+
         Scanner sc = new Scanner(System.in);
-        List<Product> produtos = Collections.unmodifiableList(new ArrayList<>()); // estoque inicial vazio (imutável)
+        List<Produto> produtos = Collections.unmodifiableList(new ArrayList<>());
         boolean running = true;
 
         while (running) {
+
             System.out.println("\n==== SISTEMA DE ESTOQUE ====");
             System.out.println("1. Cadastrar produtos");
             System.out.println("2. Entrada/Saída de estoque");
             System.out.println("3. Aplicar desconto em TODOS os produtos");
             System.out.println("4. Aplicar desconto em UM produto");
-            System.out.println("5. Remover descontos (restaurar preços originais)");
-            System.out.println("6. Relatório do estoque");
+            System.out.println("5. Remover descontos");
+            System.out.println("6. Relatório");
             System.out.println("7. Sair");
             System.out.print("Escolha uma opção: ");
 
             String opt = sc.nextLine().trim();
 
             switch (opt) {
+
                 case "1" -> {
-                    System.out.print("\nQuantos produtos deseja cadastrar? ");
+                    System.out.print("Quantos produtos deseja cadastrar? ");
                     int qtd = Integer.parseInt(sc.nextLine().trim());
-                    List<Product> novos = new ArrayList<>();
+
+                    List<Produto> novos = new ArrayList<>();
+
                     for (int i = 0; i < qtd; i++) {
-                        System.out.println("\nProduto " + (i + 1) + ":");
+                        System.out.println("\nProduto " + (i + 1));
                         System.out.print("Código: ");
                         int codigo = Integer.parseInt(sc.nextLine().trim());
+
                         System.out.print("Nome: ");
                         String nome = sc.nextLine().trim();
+
                         System.out.print("Quantidade inicial: ");
                         int quantidade = Integer.parseInt(sc.nextLine().trim());
-                        System.out.print("Preço unitário (ex: 12.50): R$ ");
-                        BigDecimal preco = new BigDecimal(sc.nextLine().trim()).setScale(2, RoundingMode.HALF_UP);
 
-                        Product p = new Product(codigo, nome, quantidade, preco, preco);
-                        novos.add(p);
+                        System.out.print("Preço (ex: 12.50): R$ ");
+                        BigDecimal preco = new BigDecimal(sc.nextLine().trim())
+                                .setScale(2, RoundingMode.HALF_UP);
+
+                        novos.add(new Produto(codigo, nome, quantidade, preco, preco));
                     }
-                    List<Product> merged = new ArrayList<>(produtos);
+
+                    List<Produto> merged = new ArrayList<>(produtos);
                     merged.addAll(novos);
                     produtos = Collections.unmodifiableList(merged);
-                    System.out.println("\nCadastro concluído!");
+
+                    System.out.println("Cadastro concluído!");
                 }
 
                 case "2" -> {
-                    System.out.print("\nDigite o código do produto: ");
+                    System.out.print("Código do produto: ");
                     int codigo = Integer.parseInt(sc.nextLine().trim());
-                    Optional<Product> maybe = buscarPorCodigo(produtos, codigo);
+
+                    Optional<Produto> maybe = buscarPorCodigo(produtos, codigo);
                     if (maybe.isEmpty()) {
                         System.out.println("Produto não encontrado!");
                         break;
                     }
-                    Product p = maybe.get();
-                    System.out.println("Produto encontrado: " + p.nome());
-                    System.out.print("1. Entrada\n2. Saída\nEscolha: ");
-                    String escolha = sc.nextLine().trim();
-                    if ("1".equals(escolha)) {
+
+                    Produto p = maybe.get();
+                    System.out.println("Produto encontrado: " + p.getNome());
+                    System.out.print("1. Entrada | 2. Saída: ");
+                    String op = sc.nextLine().trim();
+
+                    if ("1".equals(op)) {
                         System.out.print("Quantidade de entrada: ");
                         int qtd = Integer.parseInt(sc.nextLine().trim());
-                        produtos = movimentarEstoque(produtos, codigo, +qtd);
+                        produtos = movimentarEstoque(produtos, codigo, qtd);
                         System.out.println("Entrada realizada!");
-                    } else if ("2".equals(escolha)) {
+                    } else if ("2".equals(op)) {
                         System.out.print("Quantidade de saída: ");
                         int qtd = Integer.parseInt(sc.nextLine().trim());
-                        if (qtd <= p.quantidade()) {
+
+                        if (qtd <= p.getQuantidade()) {
                             produtos = movimentarEstoque(produtos, codigo, -qtd);
                             System.out.println("Saída realizada!");
                         } else {
-                            System.out.println("Quantidade insuficiente em estoque!");
+                            System.out.println("Quantidade insuficiente!");
                         }
-                    } else {
-                        System.out.println("Opção inválida.");
                     }
                 }
 
                 case "3" -> {
-                    System.out.print("\nDigite o percentual de desconto (ex: 10): ");
-                    BigDecimal desconto = new BigDecimal(sc.nextLine().trim());
-                    produtos = aplicarDescontoTodos(produtos, desconto);
-                    System.out.println("Desconto aplicado a todos os produtos.");
+                    System.out.print("Percentual de desconto: ");
+                    BigDecimal d = new BigDecimal(sc.nextLine().trim());
+                    produtos = aplicarDescontoTodos(produtos, d);
+                    System.out.println("Desconto aplicado a todos os produtos!");
                 }
 
                 case "4" -> {
-                    System.out.print("\nDigite o código do produto para aplicar desconto: ");
+                    System.out.print("Código do produto: ");
                     int codigo = Integer.parseInt(sc.nextLine().trim());
-                    Optional<Product> maybe = buscarPorCodigo(produtos, codigo);
+
+                    Optional<Produto> maybe = buscarPorCodigo(produtos, codigo);
                     if (maybe.isEmpty()) {
                         System.out.println("Produto não encontrado!");
                         break;
                     }
-                    System.out.print("Digite o percentual de desconto: ");
-                    BigDecimal desconto = new BigDecimal(sc.nextLine().trim());
-                    produtos = aplicarDescontoIndividual(produtos, codigo, desconto);
-                    Product atualizado = buscarPorCodigo(produtos, codigo).get();
-                    System.out.printf("Desconto aplicado ao produto %s! Novo preço: R$ %s%n", atualizado.nome(), atualizado.preco().toPlainString());
+
+                    System.out.print("Percentual de desconto: ");
+                    BigDecimal d = new BigDecimal(sc.nextLine().trim());
+
+                    produtos = aplicarDescontoIndividual(produtos, codigo, d);
+
+                    Produto atualizado = buscarPorCodigo(produtos, codigo).get();
+                    System.out.println("Desconto aplicado! Novo preço: R$ " +
+                            atualizado.getPreco());
                 }
 
                 case "5" -> {
                     produtos = removerDescontos(produtos);
-                    System.out.println("Todos os produtos voltaram ao preço original.");
+                    System.out.println("Descontos removidos!");
                 }
 
                 case "6" -> {
                     if (produtos.isEmpty()) {
-                        System.out.println("Nenhum produto cadastrado.");
+                        System.out.println("Nenhum produto cadastrado!");
                         break;
                     }
-                    System.out.println("\n=== RELATÓRIO DE ESTOQUE ===");
-                    produtos.forEach(prod -> System.out.printf("%s (Cód %d): %d unidades — R$ %s%n",
-                            prod.nome(), prod.codigo(), prod.quantidade(), prod.preco().toPlainString()));
+
+                    System.out.println("\n=== RELATÓRIO ===");
+                    produtos.forEach(p ->
+                            System.out.printf("%s (Cód %d): %d unidades — R$ %s%n",
+                                    p.getNome(), p.getCodigo(), p.getQuantidade(),
+                                    p.getPreco().toPlainString()));
 
                     System.out.println("\nTotal de itens: " + totalItens(produtos));
-                    System.out.println("Valor total do estoque: R$ " + totalValor(produtos).toPlainString());
+                    System.out.println("Valor total: R$ " + totalValor(produtos));
 
-                    System.out.print("\nDeseja ver produtos com baixo estoque? (digite limite mínimo ou ENTER para pular): ");
+                    System.out.print("\nLimite para baixo estoque (ENTER para ignorar): ");
                     String line = sc.nextLine().trim();
+
                     if (!line.isEmpty()) {
                         int limite = Integer.parseInt(line);
-                        List<Product> baixos = filterProducts(produtos, SistemaEstoque::estoqueBaixo, limite);
-                        System.out.println("\n=== PRODUTOS COM BAIXO ESTOQUE ===");
-                        baixos.forEach(prod -> System.out.printf("%s (Cód %d) - Quantidade: %d%n", prod.nome(), prod.codigo(), prod.quantidade()));
+                        List<Produto> baixos = filtrarBaixoEstoque(produtos, limite);
+
+                        System.out.println("\n=== BAIXO ESTOQUE ===");
+                        baixos.forEach(p ->
+                                System.out.printf("%s (Cód %d) — %d unidades%n",
+                                        p.getNome(), p.getCodigo(), p.getQuantidade()));
                     }
                 }
 
