@@ -1,17 +1,67 @@
 from functools import reduce
 
 # ==========================
-# ESTRUTURA DE DADOS
+# CLASSES (Base + Derivada)
 # ==========================
 
 class Produto:
-    def __init__(self, codigo, nome, quantidade, preco):
-        self.codigo = codigo
-        self.nome = nome
-        self.quantidade = quantidade
-        self.preco = preco
-        self.preco_original = preco
+    """Classe base — Produto básico do estoque"""
 
+    def __init__(self, codigo, nome, quantidade, preco):
+        self._codigo = codigo
+        self._nome = nome
+        self._quantidade = quantidade
+        self._preco = preco
+        self._preco_original = preco
+
+    # Métodos de acesso (encapsulamento)
+    def get_codigo(self):
+        return self._codigo
+
+    def get_nome(self):
+        return self._nome
+
+    def set_nome(self, nome):
+        if len(nome) < 2:
+            raise ValueError("O nome deve ter pelo menos 2 caracteres.")
+        self._nome = nome
+
+    def get_quantidade(self):
+        return self._quantidade
+
+    def set_quantidade(self, quantidade):
+        if quantidade < 0:
+            raise ValueError("A quantidade não pode ser negativa.")
+        self._quantidade = quantidade
+
+    def get_preco(self):
+        return self._preco
+
+    def set_preco(self, preco):
+        if preco < 0:
+            raise ValueError("O preço não pode ser negativo.")
+        self._preco = preco
+
+    def get_preco_original(self):
+        return self._preco_original
+
+
+class ProdutoComDesconto(Produto):
+    """Classe derivada — Produto com desconto aplicado"""
+
+    def __init__(self, codigo, nome, quantidade, preco, percentual):
+        super().__init__(codigo, nome, quantidade, preco)
+        self._percentual = percentual
+        self._preco = self.calcular_preco_descontado()
+
+    def calcular_preco_descontado(self):
+        return self._preco_original - (self._preco_original * (self._percentual / 100))
+
+    def get_percentual(self):
+        return self._percentual
+
+
+# Lista de produtos
 produtos = []
 
 
@@ -22,8 +72,10 @@ produtos = []
 def calcular_desconto(preco, percentual):
     return preco - (preco * (percentual / 100.0))
 
-def remover_desconto(preco_com_desconto, preco_original):
+
+def remover_desconto(preco, preco_original):
     return preco_original
+
 
 def estoque_baixo(quantidade, limite):
     return quantidade < limite
@@ -51,9 +103,10 @@ def reduzir_total(lista, funcao, inicial):
 
 def buscar_produto_por_codigo(lista, codigo):
     for p in lista:
-        if p.codigo == codigo:
+        if p.get_codigo() == codigo:
             return p
     return None
+
 
 # ==========================
 # FUNÇÕES PRINCIPAIS
@@ -73,7 +126,6 @@ def cadastrar_produtos():
 
         novos.append(Produto(codigo, nome, quantidade, preco))
 
-    # Imutabilidade — cria nova lista
     produtos = produtos + novos
     print("\nCadastro concluído!\n")
 
@@ -87,17 +139,18 @@ def movimentar_estoque():
         print("Produto não encontrado!")
         return
 
-    print(f"Produto encontrado: {produto.nome}")
+    print(f"Produto encontrado: {produto.get_nome()}")
     opcao = int(input("1. Entrada\n2. Saída\nEscolha: "))
 
     if opcao == 1:
         qtd = int(input("Quantidade de entrada: "))
-        produto.quantidade += qtd
+        produto.set_quantidade(produto.get_quantidade() + qtd)
         print("Entrada realizada!")
+
     elif opcao == 2:
         qtd = int(input("Quantidade de saída: "))
-        if qtd <= produto.quantidade:
-            produto.quantidade -= qtd
+        if qtd <= produto.get_quantidade():
+            produto.set_quantidade(produto.get_quantidade() - qtd)
             print("Saída realizada!")
         else:
             print("Quantidade insuficiente em estoque!")
@@ -106,27 +159,39 @@ def movimentar_estoque():
 
 
 def calcular_total_itens():
-    return reduzir_total([p.quantidade for p in produtos], lambda acc, x: acc + x, 0)
+    return reduzir_total(
+        [p.get_quantidade() for p in produtos],
+        lambda acc, x: acc + x,
+        0
+    )
 
 
 def calcular_valor_total():
-    return reduzir_total([p.quantidade * p.preco for p in produtos], lambda acc, x: acc + x, 0.0)
+    return reduzir_total(
+        [p.get_quantidade() * p.get_preco() for p in produtos],
+        lambda acc, x: acc + x,
+        0.0
+    )
 
 
 # ==========================
-# NOVAS FUNÇÕES (REQUERIDAS)
+# RECURSOS EXIGIDOS
 # ==========================
 
 def aplicar_desconto_todos():
     global produtos
     desconto = float(input("\nDigite o percentual de desconto: "))
 
-    def aplicar_desconto(p):
-        novo = Produto(p.codigo, p.nome, p.quantidade, calcular_desconto(p.preco, desconto))
-        novo.preco_original = p.preco_original
-        return novo
+    def aplicar(p):
+        return ProdutoComDesconto(
+            p.get_codigo(),
+            p.get_nome(),
+            p.get_quantidade(),
+            p.get_preco(),
+            desconto
+        )
 
-    produtos = aplicar_funcao_nos_precos(produtos, aplicar_desconto)
+    produtos = aplicar_funcao_nos_precos(produtos, aplicar)
     print("\nDesconto aplicado a todos os produtos!\n")
 
 
@@ -140,17 +205,33 @@ def aplicar_desconto_individual():
         return
 
     desconto = float(input("Digite o percentual de desconto: "))
-    produto.preco = calcular_desconto(produto.preco, desconto)
-    print(f"\nDesconto aplicado ao produto {produto.nome}! Novo preço: R$ {produto.preco:.2f}")
+
+    novo = ProdutoComDesconto(
+        produto.get_codigo(),
+        produto.get_nome(),
+        produto.get_quantidade(),
+        produto.get_preco(),
+        desconto
+    )
+
+    produtos = [novo if p.get_codigo() == codigo else p for p in produtos]
+
+    print(f"\nDesconto aplicado ao produto {produto.get_nome()}!\n")
 
 
 def remover_descontos():
     global produtos
     produtos = [
-        Produto(p.codigo, p.nome, p.quantidade, remover_desconto(p.preco, p.preco_original))
+        Produto(
+            p.get_codigo(),
+            p.get_nome(),
+            p.get_quantidade(),
+            p.get_preco_original()
+        )
         for p in produtos
     ]
     print("\nTodos os produtos voltaram ao preço original!\n")
+
 
 def relatorio_estoque():
     if not produtos:
@@ -159,31 +240,23 @@ def relatorio_estoque():
 
     print("\n=== RELATÓRIO DE ESTOQUE ===")
     for p in produtos:
-        print(f"{p.nome} (Cód {p.codigo}): {p.quantidade} unidades — R$ {p.preco:.2f}")
+        print(f"{p.get_nome()} (Cód {p.get_codigo()}): "
+              f"{p.get_quantidade()} unidades — R$ {p.get_preco():.2f}")
 
-    total_itens = calcular_total_itens()
-    total_valor = calcular_valor_total()
-
-    print(f"\nTotal de itens: {total_itens}")
-    print(f"Valor total do estoque: R$ {total_valor:.2f}")
+    print(f"\nTotal de itens: {calcular_total_itens()}")
+    print(f"Valor total do estoque: R$ {calcular_valor_total():.2f}")
 
     limite_str = input("\nDeseja ver produtos com baixo estoque? (digite limite mínimo ou ENTER para pular): ")
 
     if limite_str.strip() == "":
-        print("Filtro de baixo estoque ignorado.")
         return
 
-    try:
-        limite = int(limite_str)
-        baixos = filtrar_produtos(produtos, lambda p: estoque_baixo(p.quantidade, limite))
-        if baixos:
-            print("\n=== PRODUTOS COM BAIXO ESTOQUE ===")
-            for p in baixos:
-                print(f"{p.nome} (Cód {p.codigo}) - Quantidade: {p.quantidade}")
-        else:
-            print("\nNenhum produto com estoque abaixo do limite informado.")
-    except ValueError:
-        print("Valor inválido. Por favor, digite um número inteiro ou apenas pressione ENTER para pular.")
+    limite = int(limite_str)
+    baixos = filtrar_produtos(produtos, lambda p: estoque_baixo(p.get_quantidade(), limite))
+
+    print("\n=== PRODUTOS COM BAIXO ESTOQUE ===")
+    for p in baixos:
+        print(f"{p.get_nome()} - {p.get_quantidade()} unidades")
 
 
 # ==========================
@@ -197,7 +270,7 @@ def main():
         print("2. Entrada/Saída de estoque")
         print("3. Aplicar desconto em TODOS os produtos")
         print("4. Aplicar desconto em UM produto")
-        print("5. Remover descontos (restaurar preços originais)")
+        print("5. Remover descontos")
         print("6. Relatório do estoque")
         print("7. Sair")
 
