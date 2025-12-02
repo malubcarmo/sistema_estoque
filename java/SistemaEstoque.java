@@ -146,7 +146,7 @@ public class SistemaEstoque {
                         int novaQtd = p.getQuantidade() + deltaQuantidade;
                         if (novaQtd < 0) novaQtd = p.getQuantidade();
 
-                        // mantém o tipo original do produto ✔ polimorfismo
+                        //Poliformismo para manter o tipo original do produto
                         if (p instanceof ProdutoComDesconto pDesc) {
                             return new ProdutoComDesconto(
                                     pDesc.getCodigo(),
@@ -320,9 +320,11 @@ public class SistemaEstoque {
                     System.out.println("\n=== RELATÓRIO ===");
                     produtos.forEach(p ->
                             System.out.printf("%s (Cód %d): %d unidades - R$ %s - [%s]%n",
-                                    p.getNome(), p.getCodigo(), p.getQuantidade(),
-                                    p.getPreco().toPlainString(),
-                                    p.getTipo())
+                                p.getNome(), 
+                                p.getCodigo(), 
+                                p.getQuantidade(),
+                                p.getPreco().toPlainString(),
+                                p.getTipo())
                     );
 
                     System.out.println("\nTotal de itens: " + totalItens(produtos));
