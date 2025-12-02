@@ -1,12 +1,20 @@
+from abc import ABC, abstractmethod
 from functools import reduce
 
-# ==========================
-# CLASSES (Base + Derivada)
-# ==========================
+#Classe abstrata (não instanciada)
 
-class Produto:
-    """Classe base — Produto básico do estoque"""
+class ItemEstoque(ABC):
+    @abstractmethod
+    def calcular_valor(self):
+        pass
 
+    @abstractmethod
+    def descricao(self):
+        pass
+
+#Classe base (herda da classe abstrata)
+
+class Produto(ItemEstoque):
     def __init__(self, codigo, nome, quantidade, preco):
         self._codigo = codigo
         self._nome = nome
@@ -14,7 +22,7 @@ class Produto:
         self._preco = preco
         self._preco_original = preco
 
-    # Métodos de acesso (encapsulamento)
+#Encapsulamento (getters e setters)
     def get_codigo(self):
         return self._codigo
 
@@ -45,10 +53,16 @@ class Produto:
     def get_preco_original(self):
         return self._preco_original
 
+#Método obrigatório vindo da classe abstrata
+    def calcular_valor(self):
+        return self._quantidade * self._preco
 
+#Método obrigatório da classe abstrata (polimórfico)
+    def descricao(self):
+        return f"Produto comum: {self._nome} — R$ {self._preco:.2f}"
+
+#Classe derivada (herença = polimofismo)
 class ProdutoComDesconto(Produto):
-    """Classe derivada — Produto com desconto aplicado"""
-
     def __init__(self, codigo, nome, quantidade, preco, percentual):
         super().__init__(codigo, nome, quantidade, preco)
         self._percentual = percentual
@@ -60,15 +74,20 @@ class ProdutoComDesconto(Produto):
     def get_percentual(self):
         return self._percentual
 
+    # Polimorfismo — sobrescreve método da classe pai
+    def calcular_valor(self):
+        return self._quantidade * self._preco
 
-# Lista de produtos
+    # Polimorfismo — sobrescreve método da classe pai
+    def descricao(self):
+        return (f"Produto com desconto: {self._nome} — "
+                f"{self._percentual}% OFF — R$ {self._preco:.2f}")
+
+#Lista de produtos
+
 produtos = []
 
-
-# ==========================
-# FUNÇÕES PURAS
-# ==========================
-
+#Funções puras
 def calcular_desconto(preco, percentual):
     return preco - (preco * (percentual / 100.0))
 
@@ -81,10 +100,7 @@ def estoque_baixo(quantidade, limite):
     return quantidade < limite
 
 
-# ==========================
-# FUNÇÕES DE ORDEM SUPERIOR
-# ==========================
-
+#Funções de ordem superior
 def aplicar_funcao_nos_precos(lista_produtos, fn):
     return list(map(fn, lista_produtos))
 
@@ -97,21 +113,14 @@ def reduzir_total(lista, funcao, inicial):
     return reduce(funcao, lista, inicial)
 
 
-# ==========================
-# FUNÇÕES AUXILIARES
-# ==========================
-
+#Funções auxiliares
 def buscar_produto_por_codigo(lista, codigo):
     for p in lista:
         if p.get_codigo() == codigo:
             return p
     return None
 
-
-# ==========================
-# FUNÇÕES PRINCIPAIS
-# ==========================
-
+#Funções principais
 def cadastrar_produtos():
     global produtos
     num = int(input("\nQuantos produtos deseja cadastrar? "))
@@ -168,16 +177,12 @@ def calcular_total_itens():
 
 def calcular_valor_total():
     return reduzir_total(
-        [p.get_quantidade() * p.get_preco() for p in produtos],
+        [p.calcular_valor() for p in produtos],
         lambda acc, x: acc + x,
         0.0
     )
 
-
-# ==========================
-# RECURSOS EXIGIDOS
-# ==========================
-
+#Recursos exigidos
 def aplicar_desconto_todos():
     global produtos
     desconto = float(input("\nDigite o percentual de desconto: "))
@@ -240,8 +245,7 @@ def relatorio_estoque():
 
     print("\n=== RELATÓRIO DE ESTOQUE ===")
     for p in produtos:
-        print(f"{p.get_nome()} (Cód {p.get_codigo()}): "
-              f"{p.get_quantidade()} unidades — R$ {p.get_preco():.2f}")
+        print(f"{p.descricao()} — Quantidade: {p.get_quantidade()}")
 
     print(f"\nTotal de itens: {calcular_total_itens()}")
     print(f"Valor total do estoque: R$ {calcular_valor_total():.2f}")
@@ -258,11 +262,7 @@ def relatorio_estoque():
     for p in baixos:
         print(f"{p.get_nome()} - {p.get_quantidade()} unidades")
 
-
-# ==========================
-# FUNÇÃO PRINCIPAL
-# ==========================
-
+#Função principal (interface de console)
 def main():
     while True:
         print("\n==== SISTEMA DE ESTOQUE ====")
