@@ -1,4 +1,3 @@
-// SistemaEstoque.java
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -6,9 +5,7 @@ import java.util.stream.Collectors;
 
 public class SistemaEstoque {
 
-    // =====================================================================================
-    // CLASSE BASE — agora ABSTRATA ✔ (não pode ser instanciada)
-    // =====================================================================================
+    //Classe abstrata
     public static abstract class Produto {
 
         private final int codigo;
@@ -27,20 +24,18 @@ public class SistemaEstoque {
             this.precoOriginal = precoOriginal;
         }
 
-        // Getters
+        //Getters
         public int getCodigo() { return codigo; }
         public String getNome() { return nome; }
         public int getQuantidade() { return quantidade; }
         public BigDecimal getPreco() { return preco; }
         public BigDecimal getPrecoOriginal() { return precoOriginal; }
 
-        // Método polimórfico (cada produto pode exibir informação diferente)
+        //Método polimórfico onde cada produto pode exibir informação diferente
         public abstract String getTipo();
     }
 
-    // =====================================================================================
-    // NOVA CLASSE DERIVADA — ProdutoSimples ✔ (sem desconto)
-    // =====================================================================================
+    //Classe deriavada — ProdutoSimples (sem desconto)
     public static class ProdutoSimples extends Produto {
 
         public ProdutoSimples(int codigo, String nome, int quantidade,
@@ -55,9 +50,7 @@ public class SistemaEstoque {
         }
     }
 
-    // =====================================================================================
-    // CLASSE DERIVADA — ProdutoComDesconto
-    // =====================================================================================
+    //Classe derivada — ProdutoComDesconto
     public static class ProdutoComDesconto extends Produto {
 
         private final BigDecimal descontoPercentual;
@@ -87,10 +80,7 @@ public class SistemaEstoque {
         }
     }
 
-    // =====================================================================================
-    // Funções puras
-    // =====================================================================================
-
+    //Funções puras
     public static BigDecimal calcularDesconto(BigDecimal preco, BigDecimal percentual) {
         BigDecimal factor = BigDecimal.ONE.subtract(
                 percentual.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
@@ -102,10 +92,7 @@ public class SistemaEstoque {
         return quantidade < limite;
     }
 
-    // =====================================================================================
-    // Operações Funcionais
-    // =====================================================================================
-
+    //Operações Funcionais
     public static List<Produto> aplicarDescontoTodos(List<Produto> produtos, BigDecimal percentual) {
         return produtos.stream()
                 .map(p -> new ProdutoComDesconto(
@@ -205,9 +192,7 @@ public class SistemaEstoque {
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    // =====================================================================================
-    // MAIN — Interface de Console
-    // =====================================================================================
+    //Interface de Console
     public static void main(String[] args) {
 
         Scanner sc = new Scanner(System.in);
@@ -251,7 +236,6 @@ public class SistemaEstoque {
                         BigDecimal preco = new BigDecimal(sc.nextLine().trim())
                                 .setScale(2, RoundingMode.HALF_UP);
 
-                        // agora usa ProdutoSimples ✔
                         novos.add(new ProdutoSimples(codigo, nome, quantidade, preco));
                     }
 
