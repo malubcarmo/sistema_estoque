@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from functools import reduce
 
 #Classe abstrata (não instanciada)
-
 class ItemEstoque(ABC):
     @abstractmethod
     def calcular_valor(self):
