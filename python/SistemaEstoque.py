@@ -12,7 +12,6 @@ class ItemEstoque(ABC):
         pass
 
 #Classe base (herda da classe abstrata)
-
 class Produto(ItemEstoque):
     def __init__(self, codigo, nome, quantidade, preco):
         self._codigo = codigo
